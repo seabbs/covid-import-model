@@ -68,9 +68,9 @@ transfomed parameters {
     vector[31] inc;
     real phi;
     // discretised serial interval
-    si = discretised_lognormal_pmf(0:30, si_logmean, si_logsd, 31);
+    si = discretised_lognormal_pmf(0:30, si_logmean, si_logsd, 30);
     // discreteised incubation period
-    inc = discretised_lognormal_pmf(0:30, inc_logmean, inc_logsd, 31);
+    inc = discretised_lognormal_pmf(0:30, inc_logmean, inc_logsd, 30);
     // imported cases from india
     imp_b1672 = convolve(india_cases, inc, imp_frac); 
     // b1672 cases directly driven by imports
