@@ -1,5 +1,6 @@
 functions{
     // discretised truncated lognormal pmf
+    // test: discretised_lognormal_pmf(0:30, 1.65, 0.273, 30) 
     vector discretised_lognormal_pmf(int[] y, real mu, real sigma, int max_val) {
     int n = num_elements(y);
     vector[n] pmf;
@@ -18,25 +19,27 @@ functions{
     }
     return(pmf);
     }
-
+    // test: convolve(1:100, c(0, 0.5, 0.4, 0.1), 1.1)    
     vector convolve(vector cases, vector pmf, real mod) {
         int t = num_elements(cases);
         int pmf_t = num_elements(pmf);
         vector[t] conv = rep_vector(1e-5, t);
         for (s in 1:t) {
-            int index = min(pmf_t, t - s);
-            conv[s:index] = conv[s:index] + cases[s] * pmf[1:index] * mod;
+            int index = min(pmf_t, t - s + 1);
+            int j = s + index - 1;
+            conv[s:j] = conv[s:j] + cases[s] * pmf[1:index] * mod;
         }
         return(conv);
     }
-
+    // test: self_convolve(1:100, c(0, 0.5, 0.4, 0.1), 1.1)   
     vector self_convolve(vector cases, vector pmf, real mod) {
         int t = num_elements(cases);
         int pmf_t = num_elements(pmf);
         vector[t] conv = cases;
         for (s in 1:t) {
-            int index = min(pmf_t, t - s);
-            conv[s:index] = conv[s:index] + conv[s] * pmf[1:index] * mod;
+            int index = min(pmf_t, t - s + 1);
+            int j = s + index - 1;
+            conv[s:j] = conv[s:j] + conv[s] * pmf[1:index] * mod;
         }
         return(conv);
     }
@@ -54,7 +57,7 @@ data {
 }
 
 parameters {
-    real <lower = 0, upper = 0> imp_frac;
+    real <lower = 0, upper = 1> imp_frac;
     real si_logmean;
     real <lower = 0> si_logsd;
     real inc_logmean;
@@ -88,6 +91,7 @@ transformed parameters {
     // add imported cases to total b117 cases
     exp_b1672 = exp_b1672 + imp_b1672;
     // b117 cases from transmission
+    exp_b117 = rep_vector(0, t);
     exp_b117[1] = cases_obs[1];
     exp_b117 = self_convolve(exp_b117, si, R);
     prob_b117 = exp_b117 ./ (exp_b117 + exp_b1672);
@@ -104,7 +108,7 @@ model {
     si_logmean ~ normal(1.65, 0.1);
     si_logsd ~ normal(0.273, 0.05) T[0,];
     // observation model priors
-    recip_phi ~ std_normal() T[0,];
+    recip_phi ~ normal(0, 1) T[0,];
     // effective reproduction no + modifiers
     R ~ lognormal(0, 0.25);
     imp_mod ~ lognormal(0, 1); 
@@ -117,5 +121,9 @@ model {
 }
 
 generated quantities {
-   
+   int exp_cases_b1672[t];
+   int exp_cases_obs[t];
+
+   exp_cases_b1672 = binomial_rng(cases_seq, prob_b117);
+   exp_cases_obs = neg_binomial_2_rng(exp_b1672 + exp_b117, phi);
 }

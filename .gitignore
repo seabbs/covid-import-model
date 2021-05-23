@@ -1,3 +1,5 @@
 .DS_Store
 *.RData
 data-raw
+stan
+!stan/model.stan
