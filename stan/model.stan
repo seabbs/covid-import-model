@@ -60,8 +60,6 @@ parameters {
     real <lower = 0, upper = 1> imp_frac;
     real si_logmean;
     real <lower = 0> si_logsd;
-    real inc_logmean;
-    real <lower = 0> inc_logsd;
     real <lower = 0> R;
     real <lower = 0> b1672_mod;
     real <lower = 0> imp_mod;
@@ -79,10 +77,8 @@ transformed parameters {
     real phi;
     // discretised serial interval
     si = discretised_lognormal_pmf(dist_t, si_logmean, si_logsd, dt);
-    // discreteised incubation period
-    inc = discretised_lognormal_pmf(dist_t, inc_logmean, inc_logsd, dt);
     // imported cases from india
-    imp_b1672 = convolve(india_cases, inc, imp_frac); 
+    imp_b1672 = india_cases * imp_frac; 
     // b1672 cases directly driven by imports
     imp_linked_b1672 = convolve(imp_b1672, si, R * b1672_mod * imp_mod);
     // b1672 cases from transmission starting with import linked
@@ -102,8 +98,6 @@ transformed parameters {
 model {
     // import and incubation
     imp_frac ~ beta(1, 1); 
-    inc_logmean ~ normal(1.58, 0.1);
-    inc_logsd ~ normal(0.32, 0.05) T[0,];
     // serial interval
     si_logmean ~ normal(1.65, 0.1);
     si_logsd ~ normal(0.273, 0.05) T[0,];

@@ -12,7 +12,7 @@ library(data.table)
 
 # Set directories
 # setwd("~/Documents/GitHub/covid-import-model")
-data_path <- "raw-data/"
+data_path <- "data-raw/"
 
 registerDoMC(4)  #change to your number of CPU cores
 
