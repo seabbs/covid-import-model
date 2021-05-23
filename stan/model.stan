@@ -44,33 +44,40 @@ functions{
 }
 data {
     int t;
+    int dt;
+    int dist_t[dt + 1];
     int cases_obs[t];
     int cases_seq[t];
     int cases_b1672[t];
-    int india_cases[t];
+    vector[t] india_cases;
+    int posterior;
 }
 
 parameters {
+    real <lower = 0, upper = 0> imp_frac;
+    real si_logmean;
+    real <lower = 0> si_logsd;
+    real inc_logmean;
+    real <lower = 0> inc_logsd;
     real <lower = 0> R;
     real <lower = 0> b1672_mod;
     real <lower = 0> imp_mod;
-    real si_logmean;
-    real <lower = 0> si_logsd;
     real <lower = 0> recip_phi;
 }
 
-transfomed parameters {
+transformed parameters {
     vector[t] imp_b1672;
     vector[t] imp_linked_b1672;
     vector[t] exp_b1672;
     vector[t] exp_b117;
-    vector[31] si;
-    vector[31] inc;
+    vector[t] prob_b117;
+    vector[dt + 1] si;
+    vector[dt + 1] inc;
     real phi;
     // discretised serial interval
-    si = discretised_lognormal_pmf(0:30, si_logmean, si_logsd, 30);
+    si = discretised_lognormal_pmf(dist_t, si_logmean, si_logsd, dt);
     // discreteised incubation period
-    inc = discretised_lognormal_pmf(0:30, inc_logmean, inc_logsd, 30);
+    inc = discretised_lognormal_pmf(dist_t, inc_logmean, inc_logsd, dt);
     // imported cases from india
     imp_b1672 = convolve(india_cases, inc, imp_frac); 
     // b1672 cases directly driven by imports
@@ -81,8 +88,9 @@ transfomed parameters {
     // add imported cases to total b117 cases
     exp_b1672 = exp_b1672 + imp_b1672;
     // b117 cases from transmission
-    exp_b117 = cases_obs[1];
+    exp_b117[1] = cases_obs[1];
     exp_b117 = self_convolve(exp_b117, si, R);
+    prob_b117 = exp_b117 ./ (exp_b117 + exp_b1672);
     // convert overdispersion to correct scale
     phi = 1 ./ sqrt(recip_phi);
 }
@@ -95,13 +103,17 @@ model {
     // serial interval
     si_logmean ~ normal(1.65, 0.1);
     si_logsd ~ normal(0.273, 0.05) T[0,];
+    // observation model priors
+    recip_phi ~ std_normal() T[0,];
     // effective reproduction no + modifiers
     R ~ lognormal(0, 0.25);
     imp_mod ~ lognormal(0, 1); 
     b1672_mod ~ lognormal(0, 1);
-    // observation model
-    cases_b1672 ~ hypergeometric(cases_seq, exp_b1672, cases_obs - exp_b1672);
-    cases_obs ~ neg_binomial_2(exp_b1672 + exp_b117, phi);
+    if (posterior) {
+        // observation model
+        cases_b1672 ~ binomial(cases_seq, prob_b117);
+        cases_obs ~ neg_binomial_2(exp_b1672 + exp_b117, phi);
+    }
 }
 
 generated quantities {
