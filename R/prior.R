@@ -2,6 +2,7 @@ library(cmdstanr)
 library(posterior)
 library(bayesplot)
 library(data.table)
+
 # synthetic data for model
 syn_data <- list(
     t = 120,

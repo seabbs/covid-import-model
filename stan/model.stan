@@ -96,7 +96,7 @@ transformed parameters {
 }
 
 model {
-    // import and incubation
+    // import
     imp_frac ~ beta(1, 1); 
     // serial interval
     si_logmean ~ normal(1.65, 0.1);
